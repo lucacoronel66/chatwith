@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Directorio de Empresas</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="logo-container">
+    <img src="/static/logo.png" alt="Logo Chatwith.io" class="logo-img" />
+  </div>
+
+  <h1>Directorio de Empresas</h1>
+
+  <div class="controls">
+    <label for="categorySelect">Seleccionar categoría:</label>
+    <select id="categorySelect"></select>
+    <button id="showAllBtn">Ver todos</button>
+  </div>
+
+  <div id="cardsContainer">
+    <div class="cards-grid" id="cardsGrid"></div>
+    <div class="pagination">
+      <button id="prevPage">Anterior</button>
+      <span id="pageInfo"></span>
+      <button id="nextPage">Siguiente</button>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2025 Directorio de Empresas - Todos los derechos reservados</p>
+  </footer>
+
+  <script>
+    const apiUrl = "/empresas";
+    const categorySelect = document.getElementById("categorySelect");
+    const showAllBtn = document.getElementById("showAllBtn");
+    const cardsGrid = document.getElementById("cardsGrid");
+    const pageInfo = document.getElementById("pageInfo");
+    const prevBtn = document.getElementById("prevPage");
+    const nextBtn = document.getElementById("nextPage");
+
+    let allData = {};
+    let currentCategory = "";
+    let allItemsFlat = [];
+    let showingAll = false;
+    let currentPage = 1;
+    const pageSize = 8;
+
+    fetch(apiUrl)
+      .then(res => res.json())
+      .then(data => {
+        allData = data;
+        const categories = Object.keys(data).sort();
+        categories.forEach(cat => {
+          const opt = document.createElement("option");
+          opt.value = cat;
+          opt.textContent = cat;
+          categorySelect.appendChild(opt);
+        });
+        currentCategory = categories[0];
+        categorySelect.value = currentCategory;
+        flattenAllItems();
+        renderPage();
+      });
+
+    function flattenAllItems() {
+      allItemsFlat = [];
+      for (const cat in allData) {
+        allItemsFlat = allItemsFlat.concat(allData[cat]);
+      }
+    }
+
+    categorySelect.addEventListener("change", () => {
+      showingAll = false;
+      currentCategory = categorySelect.value;
+      currentPage = 1;
+      renderPage();
+    });
+
+    showAllBtn.addEventListener("click", () => {
+      showingAll = true;
+      currentPage = 1;
+      renderPage();
+    });
+
+    prevBtn.addEventListener("click", () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderPage();
+      }
+    });
+
+    nextBtn.addEventListener("click", () => {
+      const totalItems = showingAll ? allItemsFlat.length : allData[currentCategory].length;
+      const totalPages = Math.ceil(totalItems / pageSize);
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderPage();
+      }
+    });
+
+    function renderPage() {
+      const items = showingAll ? allItemsFlat : allData[currentCategory] || [];
+      const totalPages = Math.ceil(items.length / pageSize);
+      const start = (currentPage - 1) * pageSize;
+      const end = start + pageSize;
+      const pageItems = items.slice(start, end);
+
+      cardsGrid.innerHTML = "";
+      pageItems.forEach(emp => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <h3>${emp.business_name}</h3>
+          <p><strong>Ciudad:</strong> ${emp.city_province}</p>
+          <p><strong>País:</strong> ${emp.country}</p>
+          <p><strong>Teléfono:</strong> ${emp.number}</p>
+          <a class="whatsapp-button" href="https://wa.me/${emp.number.replace(/[^0-9]/g, '')}" target="_blank">
+            Contactar por WhatsApp
+          </a>
+        `;
+        cardsGrid.appendChild(card);
+      });
+
+      pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = currentPage === totalPages;
+    }
+  </script>
+</body>
+</html>
