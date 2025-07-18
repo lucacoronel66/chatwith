@@ -6,7 +6,6 @@ import pandas as pd
 
 app = FastAPI()
 
-# CORS para permitir acceso desde cualquier origen (solo para pruebas)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,23 +13,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Servir archivos estáticos desde /static
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Ruta raíz para mostrar el index.html directamente
 @app.get("/")
 def read_root():
     return FileResponse("static/index.html")
 
-# Endpoint para obtener datos agrupados por categoría
 @app.get("/empresas")
 def get_empresas():
     df = pd.read_csv("datos.csv")
+    df = df.dropna(subset=["business_name", "number", "category", "country", "city_province", "slug"])
 
     grouped = df.groupby("category")
     data_by_category = {}
 
     for category, group in grouped:
+        group = group.fillna("")  # evitar NaN en JSON
         data_by_category[category] = group[[
             "business_name", "number", "slug", "country", "city_province"
         ]].to_dict(orient="records")
